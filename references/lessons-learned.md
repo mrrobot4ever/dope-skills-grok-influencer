@@ -66,11 +66,14 @@
 
 ## Script Writing
 
-- **12-14 words per 4-second segment** is optimal (tested: +15% density beat standard and -15%).
-- +15% words (~12-14): BEST lip sync. Continuous speech fills the segment, model animates mouth most naturally.
-- Standard (~10-12): decent but slightly looser sync.
-- -15% words (~8-10): more dead space, comparable sync but more total segments and transitions.
-- Prefer fewer, denser segments over many sparse ones.
+- **12-14 words AND 20-24 syllables per 4-second segment** is the optimal standard.
+- Word count alone is unreliable: "I lost my best friend" (6 words, 6 syllables) vs "I accidentally discovered institutions" (4 words, 14 syllables).
+- Natural speech pace is ~5-6 syllables/second, so 4 seconds = 20-24 syllables.
+- Segments exceeding 24 syllables risk rushed/cut-off speech even if word count looks fine.
+- Segments under 18 syllables leave dead space.
+- Prefer short punchy monosyllabic words: "cash" over "financial compensation", "lost" over "unfortunately misplaced".
+- After writing each segment, count syllables. This is the most reliable predictor of fit.
+- Short punchy phrases > long complex sentences.
 - Hook must be in segment 1 -- viewers decide to stay or scroll in the first 2 seconds.
 - End with a CTA (call to action) in the final segment.
 - Short punchy phrases > long complex sentences.

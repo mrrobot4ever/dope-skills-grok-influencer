@@ -92,12 +92,17 @@ Tested segment durations:
 - 6s: Good but slightly more transitions/cuts visible
 - 4s: Best speech-to-segment alignment, tightest pacing, least dead space
 
-Tested word density at 4s segments:
-- **+15% words (~12-14 per segment):** Best lip sync results. The model handles denser speech well and produces the most natural mouth movements.
-- **Standard (~10-12 per segment):** Good baseline but slightly looser sync.
-- **-15% words (~8-10 per segment):** More dead space between phrases, lip sync comparable but more total segments.
+**Optimal density: 12-14 words AND 20-24 syllables per 4-second segment.**
 
-**Rule of thumb:** Aim for **12-14 words per 4-second segment**. Denser is better -- the model syncs best when there's continuous speech filling the segment. Fewer total segments also means fewer visual transitions.
+Word count alone is unreliable because word length varies ("I" = 1 syllable, "accidentally" = 5). The dual constraint ensures speech actually fits in 4 seconds at natural pace (~5-6 syllables/second).
+
+Tested densities:
+- **12-14 words, 20-24 syllables:** Best lip sync. Continuous speech fills the segment, model animates mouth most naturally.
+- **10-12 words (~18-20 syllables):** Slightly looser sync, more dead space.
+- **8-10 words (~14-18 syllables):** Too sparse, excessive pauses between phrases.
+- **14-16 words (25+ syllables):** Risk of speech being rushed or cut off.
+
+**Script writing rule:** After writing each segment, count syllables. If a segment has 14 words but 28 syllables (lots of multi-syllable words), split it. Prefer short punchy words over long complex ones -- "money" over "financial compensation."
 
 ## Pipeline Overview
 
@@ -135,7 +140,7 @@ Write the full script the character will say to camera. Target length based on d
 
 ### Step 4: Split Script into 4-Second Segments
 
-Each segment should be a full sentence or two. **Aim for 12-14 words per segment** (dense). Denser speech produces the best lip sync because the model has continuous speech to animate. Fewer total segments also means fewer visual transitions.
+Each segment should be a full sentence or two. **Aim for 12-14 words AND 20-24 syllables per segment.** After writing each segment, verify the syllable count. Prefer short punchy words -- they fill 4 seconds efficiently and sync better than multi-syllable words. If a segment exceeds 24 syllables, split it or simplify the vocabulary.
 
 ### Step 5: Generate Video Segments
 
