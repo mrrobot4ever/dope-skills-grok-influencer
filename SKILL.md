@@ -18,7 +18,7 @@ Generate social-media-ready talking-head videos with a consistent AI character u
 
 | Constant | Value |
 |----------|-------|
-| Image model | `grok-imagine-image` |
+| Image model | `grok-imagine-image-pro` (preferred) or `grok-imagine-image` (fallback) |
 | Video model | `grok-imagine-video` |
 | Video segment duration | 4 seconds (optimal for speech pacing) |
 | Aspect ratio | 9:16 (vertical/portrait for social) |
@@ -56,7 +56,7 @@ curl -s --max-time 120 \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer $XAI_KEY" \
   -d '{
-    "model": "grok-imagine-image",
+    "model": "grok-imagine-image-pro",
     "prompt": "[CHARACTER ANCHOR BLOCK], [SCENE DESCRIPTION], shot on Sony A7IV [lens], 9:16 portrait orientation, no AI artifacts",
     "seed": 42
   }'
@@ -76,12 +76,21 @@ Tested and confirmed: Grok Imagine Video with identical seed, identical referenc
 - Keep the scene description portion of the prompt identical across segments
 - Only change the dialogue text between segments
 
-## Video Segment Duration
+## Video Segment Duration & Word Density
 
-**4 seconds is optimal.** Tested 6s, 8s, and 15s segments:
+**4 seconds per segment** with **sparse word density (~8-10 words per segment)** produces the best lip sync and overall results.
+
+Tested segment durations:
 - 15s: Voice can drift, more dead space, speech may not match prompt length
 - 6s: Good but slightly more transitions/cuts visible
 - 4s: Best speech-to-segment alignment, tightest pacing, least dead space
+
+Tested word density at 4s segments:
+- **+15% words (~12-14 per segment):** Speech feels rushed, lip sync degrades, model struggles to fit all words in 4 seconds
+- **Standard (~10-12 per segment):** Good baseline
+- **-15% words (~8-10 per segment):** Best results. Better lip sync, more natural pacing, cleaner mouth movements. More segments needed for same script but superior quality.
+
+**Rule of thumb:** When splitting a script, prefer shorter phrases with fewer words. 8-10 words per 4-second segment. Accept more segments over denser segments.
 
 ## Pipeline Overview
 
@@ -120,7 +129,7 @@ Write the full script the character will say to camera. Target length based on d
 
 ### Step 4: Split Script into 4-Second Segments
 
-Each segment should be one natural phrase or sentence. Aim for 10-12 words per segment. The dialogue must fit comfortably in 4 seconds of speech.
+Each segment should be one short natural phrase. **Aim for 8-10 words per segment** (sparse density). Shorter phrases produce better lip sync than cramming more words in. Accept having more total segments -- quality over compression.
 
 ### Step 5: Generate Video Segments
 
