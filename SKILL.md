@@ -213,6 +213,24 @@ Better:
 Seg 1: "I remember the exact morning everything changed. I was sitting here with my last forty bucks." (15w, 24syl ✓)
 ```
 
+### Step 4b: Verify Density (MANDATORY -- Do Not Skip)
+
+**Before generating ANY video, count words and syllables for EVERY segment.** This is a hard gate. Do not proceed to Step 5 until every segment passes.
+
+For each segment, verify:
+- **Words: 13-16** (target 15)
+- **Syllables: 22-26** (target 24)
+
+If a segment exceeds 16 words or 26 syllables, split it or simplify vocabulary before proceeding. If a segment is under 13 words or 22 syllables, merge it with an adjacent segment or add detail.
+
+**Print the count for every segment** as confirmation:
+```
+Seg 1: "text here" (15w, 24syl) ✓
+Seg 2: "text here" (18w, 30syl) ✗ -- REWRITE
+```
+
+Only proceed to Step 5 after all segments show ✓.
+
 ### Step 5: Generate Video Segments
 
 **Submit ALL segments in parallel** for speed:

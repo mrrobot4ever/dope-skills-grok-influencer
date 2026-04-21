@@ -82,6 +82,7 @@
 - Prefer short punchy monosyllabic words: "cash" over "financial compensation", "lost" over "unfortunately misplaced".
 - After writing each segment, count syllables. This is the most reliable predictor of fit.
 - Short punchy phrases > long complex sentences.
+- CRITICAL: Never skip the density verification step. Print word + syllable count for every segment before generating video. Natural scriptwriting produces 18-22 word sentences -- these MUST be trimmed to 13-16 words before generation. This is the most common mistake in the pipeline.
 - Hook must be in segment 1 -- viewers decide to stay or scroll in the first 2 seconds.
 - End with a CTA (call to action) in the final segment.
 - Short punchy phrases > long complex sentences.
