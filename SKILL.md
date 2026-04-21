@@ -86,11 +86,11 @@ Tested segment durations:
 - 4s: Best speech-to-segment alignment, tightest pacing, least dead space
 
 Tested word density at 4s segments:
-- **+15% words (~12-14 per segment):** Speech feels rushed, lip sync degrades, model struggles to fit all words in 4 seconds
-- **Standard (~10-12 per segment):** Good baseline
-- **-15% words (~8-10 per segment):** Best results. Better lip sync, more natural pacing, cleaner mouth movements. More segments needed for same script but superior quality.
+- **+15% words (~12-14 per segment):** Best lip sync results. The model handles denser speech well and produces the most natural mouth movements.
+- **Standard (~10-12 per segment):** Good baseline but slightly looser sync.
+- **-15% words (~8-10 per segment):** More dead space between phrases, lip sync comparable but more total segments.
 
-**Rule of thumb:** When splitting a script, prefer shorter phrases with fewer words. 8-10 words per 4-second segment. Accept more segments over denser segments.
+**Rule of thumb:** Aim for **12-14 words per 4-second segment**. Denser is better -- the model syncs best when there's continuous speech filling the segment. Fewer total segments also means fewer visual transitions.
 
 ## Pipeline Overview
 
@@ -99,8 +99,7 @@ Define character → Generate reference image (Grok Image + seed)
   → Write script → Split into 4s segments
   → Generate all video segments (Grok Video + seed + ref image)
   → Concat in numeric order
-  → Remove dead space (silence removal)
-  → Final video
+  → Final video (do NOT remove dead space)
 ```
 
 ## Step-by-Step Process
@@ -129,7 +128,7 @@ Write the full script the character will say to camera. Target length based on d
 
 ### Step 4: Split Script into 4-Second Segments
 
-Each segment should be one short natural phrase. **Aim for 8-10 words per segment** (sparse density). Shorter phrases produce better lip sync than cramming more words in. Accept having more total segments -- quality over compression.
+Each segment should be a full sentence or two. **Aim for 12-14 words per segment** (dense). Denser speech produces the best lip sync because the model has continuous speech to animate. Fewer total segments also means fewer visual transitions.
 
 ### Step 5: Generate Video Segments
 
@@ -171,19 +170,13 @@ ffmpeg -y -f concat -safe 0 -i concat.txt \
   final.mp4
 ```
 
-### Step 7: Remove Dead Space
+### Step 7: Do NOT Remove Dead Space
 
-Detect silence gaps and extract only speaking portions:
+**CRITICAL:** Do not run silence removal on AI-generated talking head videos. The "silent" moments contain visual lip transition frames (mouth closing between sentences, breathing movements). Removing these frames breaks lip sync -- the audio sounds smooth but the mouth jumps between positions with no transition.
 
-```python
-# Detect silence
-ffmpeg -i input.mp4 -af "silencedetect=noise=-30dB:d=0.3" -f null -
+Dead space removal works for real human footage. It destroys AI-generated lip sync.
 
-# For each gap between silences, extract the speaking segment
-# Concat speaking segments only
-```
-
-This typically removes 5-8 seconds from a 44-second video.
+The concatenated video from Step 6 IS the final deliverable.
 
 **Send the final video to the user immediately upon completion.**
 

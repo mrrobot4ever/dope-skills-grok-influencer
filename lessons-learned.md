@@ -41,12 +41,13 @@
 - Google Veo has aggressive content filters -- rejects shirtless reference images.
 - If using Veo as an alternative, characters must wear clothing in reference images.
 
-## Dead Space Removal
+## Dead Space Removal -- DO NOT DO THIS
 
-- AI-generated video segments typically have 0.3-1.5s of silence at boundaries.
-- Over 11 segments, this accumulates to 5-8 seconds of dead space.
-- Silence detection + extraction is essential as a final step.
-- Use silencedetect with noise=-30dB and d=0.3 (minimum 300ms silence gap).
+- DO NOT remove silence/dead space from AI-generated talking head videos.
+- The "silent" frames contain visual lip transitions (mouth closing, breathing, position changes).
+- Cutting these frames breaks lip sync: audio sounds smooth but mouth jumps between positions.
+- Dead space removal works for real human footage or audio-only content. It destroys AI lip sync.
+- The raw concatenated video is the final deliverable.
 
 ## Image Model Quality
 
@@ -65,11 +66,11 @@
 
 ## Script Writing
 
-- **8-10 words per 4-second segment** is optimal (tested: -15% density beat standard and +15%).
-- +15% words (~12-14): lip sync degrades, speech feels rushed, model can't fit it all.
-- Standard (~10-12): decent baseline but not optimal.
-- -15% words (~8-10): best lip sync, most natural pacing, cleaner mouth movements. Produces more segments but superior quality.
-- Accept more total segments over denser segments -- quality > compression.
+- **12-14 words per 4-second segment** is optimal (tested: +15% density beat standard and -15%).
+- +15% words (~12-14): BEST lip sync. Continuous speech fills the segment, model animates mouth most naturally.
+- Standard (~10-12): decent but slightly looser sync.
+- -15% words (~8-10): more dead space, comparable sync but more total segments and transitions.
+- Prefer fewer, denser segments over many sparse ones.
 - Hook must be in segment 1 -- viewers decide to stay or scroll in the first 2 seconds.
 - End with a CTA (call to action) in the final segment.
 - Short punchy phrases > long complex sentences.
