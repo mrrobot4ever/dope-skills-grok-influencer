@@ -7,6 +7,13 @@ description: Generate AI influencer video content using Grok Imagine for image a
 
 Generate social-media-ready talking-head videos with a consistent AI character using Grok Imagine APIs.
 
+## Prerequisites
+
+See `references/setup.md` for full installation and API key setup instructions. Minimum requirements:
+- xAI API key (sign up at https://console.x.ai/)
+- ffmpeg installed
+- Python 3.9+ with Pillow and requests
+
 ## Inputs Required
 
 1. **Character description** -- detailed physical appearance (the "anchor block")
