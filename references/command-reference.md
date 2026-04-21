@@ -42,7 +42,12 @@ img_b64 = base64.b64encode(buf.getvalue()).decode()
 
 ## Submit Video Segment
 
+The scene description MUST end with fixed camera instructions.
+
 ```python
+# Scene block template (keep identical across all segments):
+SCENE_DESC = "Young [description] man [location], speaking directly to camera, natural lip movements, [energy], [lighting], static camera, no camera movement, locked tripod shot, fixed angle, no zoom, no pan, cinematic"
+
 payload = {
     "model": "grok-imagine-video",
     "prompt": f"He talks to the camera saying: {text} {SCENE_DESC}",

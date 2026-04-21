@@ -14,6 +14,14 @@
 - Changing the scene description or reference image may shift the voice.
 - For multi-segment videos, keep everything constant except the dialogue text.
 
+## Fixed Camera (Critical)
+
+- Always include "static camera, no camera movement, locked tripod shot, fixed angle, no zoom, no pan" in every video prompt.
+- Without this, each segment has slightly different camera angles and movements.
+- When concatenated, these differences create jarring visual jumps between segments.
+- Fixed camera produces consistent framing so segment transitions are seamless.
+- Tested: fixed camera version is noticeably better than default (which allows subtle camera drift).
+
 ## Segment Duration
 
 - 4 seconds is the sweet spot for talking-head content.
@@ -66,7 +74,7 @@
 
 ## Script Writing
 
-- **12-14 words AND 20-24 syllables per 4-second segment** is the optimal standard.
+- **~15 words AND 22-26 syllables per 4-second segment** produces the best lip sync (high density).
 - Word count alone is unreliable: "I lost my best friend" (6 words, 6 syllables) vs "I accidentally discovered institutions" (4 words, 14 syllables).
 - Natural speech pace is ~5-6 syllables/second, so 4 seconds = 20-24 syllables.
 - Segments exceeding 24 syllables risk rushed/cut-off speech even if word count looks fine.

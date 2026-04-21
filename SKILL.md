@@ -14,6 +14,19 @@ See `references/setup.md` for full installation and API key setup instructions. 
 - ffmpeg installed
 - Python 3.9+ with Pillow and requests
 
+## Quick Start
+
+If you just want to generate a video fast, here's the minimum flow:
+
+1. Pick a character name and write a detailed physical description (the "anchor block")
+2. Generate a 9:16 image with `grok-imagine-image-pro` using the anchor + scene + seed
+3. Write a script, split into segments of ~15 words / 22-26 syllables each
+4. Generate 4-second video clips for each segment (same image, same seed, fixed camera)
+5. Concatenate clips in numeric order with ffmpeg
+6. Done. Do NOT remove dead space.
+
+Details for each step are below.
+
 ## Inputs Required
 
 1. **Character description** -- detailed physical appearance (the "anchor block")
@@ -23,133 +36,191 @@ See `references/setup.md` for full installation and API key setup instructions. 
 
 ## Global Constants
 
-| Constant | Value |
-|----------|-------|
-| Image model | `grok-imagine-image-pro` (preferred) or `grok-imagine-image` (fallback) |
-| Video model | `grok-imagine-video` |
-| Video segment duration | 4 seconds (optimal for speech pacing) |
-| Aspect ratio | 9:16 (vertical/portrait for social) |
-| Resolution | 720p (must specify explicitly) |
-| Seed | User-specified (default 42) |
-| API base | `https://api.x.ai/v1` |
-| API key env | `~/.openclaw/workspace/.env.xai` (XAI_API_KEY) |
+| Constant | Value | Notes |
+|----------|-------|-------|
+| Image model | `grok-imagine-image-pro` | Higher quality than standard. Use `grok-imagine-image` as fallback only. |
+| Video model | `grok-imagine-video` | Supports speech generation with lip sync |
+| Segment duration | 4 seconds | Best speech-to-video alignment |
+| Aspect ratio | `9:16` | Vertical/portrait for social media (Shorts, Reels, TikTok) |
+| Resolution | `720p` | MUST specify explicitly or output defaults to 480p |
+| Seed | User-specified (default 42) | Same seed = same character + same voice |
+| Camera | Fixed/static | Add "static camera, no camera movement, locked tripod shot, fixed angle, no zoom, no pan" to every video prompt |
+| API base | `https://api.x.ai/v1` | |
+| API key location | `~/.openclaw/workspace/.env.xai` | Format: `XAI_API_KEY=xai-xxxxx` |
 
 ## Character Consistency
 
 Character consistency across images comes from three things working together:
 
-1. **Identical character anchor block** -- A detailed physical description that appears word-for-word at the START of every prompt. Include: age, build, body fat %, specific muscle details, face structure (jawline, cheekbones), facial hair, hair color/style/length, eye color, expression, skin tone/texture. The more specific, the less variance.
+1. **Identical character anchor block** -- A detailed physical description that appears word-for-word at the START of every prompt. The more specific, the less variance between generations.
 
-2. **Same seed** -- The seed controls the initial noise pattern. Same seed + same character block = same person interpreted by the model. Different seeds produce different people from identical prompts.
+2. **Same seed** -- Controls the initial noise pattern. Same seed + same character block = same person. Different seeds = different people from identical prompts.
 
-3. **Scene description at the end** -- Only the trailing portion of the prompt changes between images. The model weights earlier tokens more heavily, so the character block dominates.
+3. **Scene description at the end** -- Only the trailing part of the prompt changes. The model weights earlier tokens more heavily, so the character block dominates.
 
 ### Character Anchor Block Template
+
+Include ALL of these attributes for maximum consistency:
 
 ```
 [AGE]-year-old [gender] model named [NAME], [clothing], [build] build with [body fat]% body fat, [muscle details], [jawline], [cheekbones], [facial hair], [hair color/style/length], [eye color] eyes, [expression], [skin tone/texture]
 ```
 
-Example:
+**Example:**
 ```
 22-year-old male model named Jack Bass, wearing a fitted white tank top, athletic build with low body fat 8 percent, visible muscle definition and vascularity on forearms and biceps, sharp jawline, high cheekbones, light stubble, medium-length textured dark brown hair swept back, hazel-green eyes, confident subtle smirk, tanned skin with natural skin texture and pores
 ```
 
-### Image Generation
+**Important:** This exact block must appear word-for-word in every prompt for this character. Even small changes (adding or removing a word) can shift the face.
 
-```bash
-curl -s --max-time 120 \
-  "https://api.x.ai/v1/images/generations" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer $XAI_KEY" \
-  -d '{
+### Generating the Image
+
+```python
+import json, subprocess
+
+payload = {
     "model": "grok-imagine-image-pro",
-    "prompt": "[CHARACTER ANCHOR BLOCK], [SCENE DESCRIPTION], shot on Sony A7IV [lens], 9:16 portrait orientation, no AI artifacts",
+    "prompt": f"{CHARACTER_ANCHOR}, {SCENE_DESCRIPTION}, shot on Sony A7IV [lens]mm, 9:16 portrait orientation, no AI artifacts",
     "seed": 42
-  }'
+}
+
+result = subprocess.run([
+    'curl', '-s', '--max-time', '180',
+    'https://api.x.ai/v1/images/generations',
+    '-H', 'Content-Type: application/json',
+    '-H', f'Authorization: Bearer {XAI_KEY}',
+    '-d', json.dumps(payload)
+], capture_output=True, text=True)
+
+url = json.loads(result.stdout)['data'][0]['url']
+# Download: curl -s -L -o output.jpg "$url"
 ```
 
-Response: `data[0].url` -- download with curl.
+**Always show the image to the user for approval before generating video.**
 
 ## Voice Consistency
 
-Voice consistency across video segments comes from using the **same seed + same reference image + similar prompt structure**.
+Voice consistency across video segments comes from:
+- **Same seed** across all segments
+- **Same reference image** for all segments
+- **Same scene description block** in every prompt
+- **Only the dialogue text changes** between segments
 
-Tested and confirmed: Grok Imagine Video with identical seed, identical reference image, and the same character/scene description block produces nearly identical voices across separate generations. The seed anchors not just the visual output but the voice characteristics.
+Tested and confirmed: these four rules together produce nearly identical voices across separate generations.
 
-**Rules for voice consistency:**
-- Always use the same seed across all segments of a video
-- Always use the same reference image for all segments
-- Keep the scene description portion of the prompt identical across segments
-- Only change the dialogue text between segments
+## Fixed Camera (Required)
 
-## Video Segment Duration & Word Density
+**Always include fixed camera instructions in every video prompt.** Without this, the camera angle drifts between segments, creating jarring transitions when concatenated.
 
-**4 seconds per segment** with **sparse word density (~8-10 words per segment)** produces the best lip sync and overall results.
+Add this to the end of every scene description block:
+```
+static camera, no camera movement, locked tripod shot, fixed angle, no zoom, no pan
+```
 
-Tested segment durations:
-- 15s: Voice can drift, more dead space, speech may not match prompt length
-- 6s: Good but slightly more transitions/cuts visible
-- 4s: Best speech-to-segment alignment, tightest pacing, least dead space
+This produces consistent framing across all segments so cuts between them are seamless.
 
-**Optimal density: 12-14 words AND 20-24 syllables per 4-second segment.**
+## Word Density & Syllable Count
 
-Word count alone is unreliable because word length varies ("I" = 1 syllable, "accidentally" = 5). The dual constraint ensures speech actually fits in 4 seconds at natural pace (~5-6 syllables/second).
+**High density produces the best lip sync results.**
 
-Tested densities:
-- **12-14 words, 20-24 syllables:** Best lip sync. Continuous speech fills the segment, model animates mouth most naturally.
-- **10-12 words (~18-20 syllables):** Slightly looser sync, more dead space.
-- **8-10 words (~14-18 syllables):** Too sparse, excessive pauses between phrases.
-- **14-16 words (25+ syllables):** Risk of speech being rushed or cut off.
+Target per 4-second segment:
+- **~15 words**
+- **22-26 syllables**
+- Natural speaking pace is ~5-6 syllables/second
 
-**Script writing rule:** After writing each segment, count syllables. If a segment has 14 words but 28 syllables (lots of multi-syllable words), split it. Prefer short punchy words over long complex ones -- "money" over "financial compensation."
+Word count alone is unreliable because word length varies enormously:
+- "I lost my best friend" = 6 words, 6 syllables
+- "I accidentally discovered institutions" = 4 words, 14 syllables
+
+**After writing each segment, count the syllables.** This is the most reliable predictor of whether the speech will fit naturally in 4 seconds.
+
+If a segment exceeds 26 syllables, split it or replace long words with shorter ones:
+- "financial compensation" → "cash"
+- "unfortunately" → "sadly"
+- "accidentally discovered" → "stumbled on"
+
+### Density Comparison (Tested)
+
+| Density | Words/seg | Syllables/seg | Segments for 45s script | Result |
+|---------|-----------|---------------|------------------------|--------|
+| High (best) | ~15 | 22-26 | 9 | Best lip sync, fewest transitions |
+| Normal | ~13 | 20-24 | 11 | Good but slightly looser sync |
+| Low | ~10 | 16-20 | 14 | More dead space, more transitions |
 
 ## Pipeline Overview
 
 ```
-Define character → Generate reference image (Grok Image + seed)
-  → Write script → Split into 4s segments
-  → Generate all video segments (Grok Video + seed + ref image)
-  → Concat in numeric order
-  → Final video (do NOT remove dead space)
+1. Define character (anchor block + name + seed)
+2. Generate 9:16 reference image (grok-imagine-image-pro)
+3. Get user approval on image
+4. Write script with viral hooks and open loops
+5. Split into 4-second segments (~15 words, 22-26 syllables each)
+6. Generate all video segments in parallel (grok-imagine-video + fixed camera)
+7. Concatenate in numeric order (NOT lexicographic)
+8. Send final video to user (do NOT remove dead space)
 ```
 
 ## Step-by-Step Process
 
 ### Step 1: Define Character
 
-Create the character anchor block. Store it for reuse across all content for this character. Give the character a name for easy reference.
+Create the character anchor block with every physical detail. Store it as a variable for reuse. Give the character a name.
 
 ### Step 2: Generate Reference Image
 
-Generate a 9:16 portrait image using Grok Imagine with the character anchor block + scene description + seed.
+Generate a 9:16 portrait image using `grok-imagine-image-pro` with:
+- Character anchor block at the START of the prompt
+- Scene description after the anchor
+- Camera/lens details
+- `9:16 portrait orientation, no AI artifacts` at the end
+- The chosen seed number
 
-**Always send the image to the user for approval before proceeding.**
+**Show the image to the user. Do not proceed until approved.**
 
 ### Step 3: Write Script
 
-Write the full script the character will say to camera. Target length based on desired video duration (roughly 10-12 words per 4-second segment).
+Write the full script. Guidelines for engaging content:
 
-**Script writing guidelines for viral content:**
-- **Hook in first segment** -- curiosity gap, flex, or bold claim
-- **Open loops** -- promise information that comes later ("I'll tell you what changed")
-- **Pattern interrupts** -- contrast common behavior with the character's approach
-- **Specificity** -- concrete numbers, named strategies, real details
-- **Relatability** -- rags-to-riches arc, "I was where you are"
-- **Scarcity/urgency in final segment** -- "before I take it down", "link in bio"
+**Story-driven scripts (best for engagement):**
+- Tell a real-feeling personal story
+- Include specific details (dollar amounts, time frames, locations)
+- Show vulnerability -- moments of failure or doubt
+- Let the viewer feel like they're hearing something private
 
-### Step 4: Split Script into 4-Second Segments
+**Viral techniques:**
+- **Hook in segment 1** -- curiosity gap, bold claim, or pattern interrupt ("Stop scrolling", "Nobody warned me about...")
+- **Open loops** -- tease information that comes later ("I'll tell you what changed", "But that's not even the crazy part")
+- **Controversy/enemy framing** -- "The gurus don't want you knowing this"
+- **Specificity** -- "$412 profit", "fourteen months ago", "two in the morning"
+- **Relatability** -- "I couldn't afford a sandwich", "sleeping on my boy's couch"
+- **Scarcity in final segment** -- "before I take it down", "link in bio right now"
 
-Each segment should be a full sentence or two. **Aim for 12-14 words AND 20-24 syllables per segment.** After writing each segment, verify the syllable count. Prefer short punchy words -- they fill 4 seconds efficiently and sync better than multi-syllable words. If a segment exceeds 24 syllables, split it or simplify the vocabulary.
+**Pure story scripts (no selling) perform best for building audience trust.** Save the CTA/pitch scripts for after you've built a following.
+
+### Step 4: Split Script into Segments
+
+Split the script into segments targeting:
+- **~15 words per segment**
+- **22-26 syllables per segment**
+
+Count syllables for each segment. Adjust vocabulary if needed.
+
+**Example of good segmentation:**
+```
+Seg 1: "I remember the exact morning everything changed for me. I was sitting right here with my last forty bucks." (18w, 28syl → split this)
+
+Better:
+Seg 1: "I remember the exact morning everything changed. I was sitting here with my last forty bucks." (15w, 24syl ✓)
+```
 
 ### Step 5: Generate Video Segments
 
-Submit ALL segments to Grok Imagine Video in parallel:
+**Submit ALL segments in parallel** for speed:
 
 ```python
 payload = {
     "model": "grok-imagine-video",
-    "prompt": f"He talks to the camera saying: {segment_text} {scene_description}",
+    "prompt": f"He talks to the camera saying: {segment_text} {SCENE_BLOCK}",
     "image": {"url": f"data:image/jpeg;base64,{img_b64}"},
     "duration": 4,
     "aspect_ratio": "9:16",
@@ -158,21 +229,28 @@ payload = {
 }
 ```
 
-**Reference image preparation:** Compress to 360x640 JPEG quality 50 before base64 encoding.
+**The scene block MUST include fixed camera instructions:**
+```
+Young [description] man [location], speaking directly to camera, natural lip movements, [energy/emotion], [lighting], static camera, no camera movement, locked tripod shot, fixed angle, no zoom, no pan, cinematic
+```
 
-Poll all jobs until done. Save with numeric naming: `seg1.mp4`, `seg2.mp4`, etc.
+**Reference image preparation:** Compress to 360x640 JPEG quality 50 before base64 encoding. This keeps the payload under API limits.
+
+**Polling:** Check status every 10 seconds. 4-second clips typically complete in 15-30 seconds.
 
 ### Step 6: Concatenate in Correct Order
 
-**CRITICAL: Never use sorted() on filenames.** Lexicographic sort puts seg10 before seg2. Always iterate numerically:
+**CRITICAL: Never use sorted() on filenames.** `sorted(["seg1.mp4", "seg10.mp4", "seg2.mp4"])` produces wrong order.
+
+Always use numeric iteration:
 
 ```python
-with open(concat_file, "w") as f:
+with open("concat.txt", "w") as f:
     for i in range(1, num_segments + 1):
         f.write(f"file 'seg{i}.mp4'\n")
 ```
 
-Concat with re-encode for consistent encoding:
+Re-encode for consistent output:
 
 ```bash
 ffmpeg -y -f concat -safe 0 -i concat.txt \
@@ -184,60 +262,54 @@ ffmpeg -y -f concat -safe 0 -i concat.txt \
 
 ### Step 7: Do NOT Remove Dead Space
 
-**CRITICAL:** Do not run silence removal on AI-generated talking head videos. The "silent" moments contain visual lip transition frames (mouth closing between sentences, breathing movements). Removing these frames breaks lip sync -- the audio sounds smooth but the mouth jumps between positions with no transition.
+**Do not run silence removal on AI-generated talking head videos.**
 
-Dead space removal works for real human footage. It destroys AI-generated lip sync.
+The "silent" moments contain critical visual information:
+- Mouth closing between sentences
+- Breathing movements
+- Facial expression transitions
+
+Removing these frames breaks lip sync. The audio sounds smooth but the mouth jumps between positions with no transition.
 
 The concatenated video from Step 6 IS the final deliverable.
 
-**Send the final video to the user immediately upon completion.**
+### Step 8: Deliver
 
-## Prompt Structure
+Send the final video to the user immediately. Never make them ask for it.
 
-Every video segment prompt follows this structure:
+## Creating Multiple Characters
 
-```
-He talks to the camera saying: [DIALOGUE]. [SCENE DESCRIPTION WITH CHARACTER]
-```
+Each character needs:
+1. A unique anchor block with distinct physical features
+2. A unique seed number (character A = seed 42, character B = seed 100, etc.)
 
-The scene description block should be identical across all segments:
-
-```
-Young [clothing] [build description] man [location details], speaking directly to camera, natural lip movements, confident energy, [lighting], cinematic
-```
+Characters with different seeds will look completely different even with similar descriptions. This is by design.
 
 ## Error Handling
 
 | Issue | Cause | Fix |
 |-------|-------|-----|
-| Segments out of order | Lexicographic filename sort | Use numeric iteration |
-| Voice drift between segments | Different seeds or prompts | Same seed + same ref image + same scene block |
+| Segments out of order | Lexicographic filename sort | Use numeric `for i in range(1, N+1)` |
+| Voice drift between segments | Different seeds or ref images | Same seed + same image + same scene block for all segments |
 | Low resolution (480p) | Missing resolution param | Always include `"resolution": "720p"` |
-| Character looks different | Changed anchor block or seed | Keep anchor block word-for-word identical |
-| Dead space in video | Natural gaps between segments | Run silence removal as final step |
-| Content filtered | Prompt or image triggers safety | Rephrase prompt, add clothing to reference image |
+| Character looks different | Anchor block changed | Keep anchor block identical, word-for-word |
+| Camera angle jumps between segments | No fixed camera instruction | Add static camera instructions to every prompt |
+| Lip sync broken after editing | Dead space was removed | Do NOT remove dead space from AI video |
+| Content filtered by other APIs | Shirtless/swimwear in reference image | Grok handles this fine; Google Veo does not |
+| Image generation timeout | API slow on pro model | Retry once; pro model occasionally takes longer |
 
 ## File Organization
 
 ```
 projects/<character-name>/
-  <character>-portrait.jpg        -- approved 9:16 reference image
-  seg1.mp4 ... segN.mp4          -- individual video segments
-  <character>-final.mp4           -- concatenated video
-  <character>-tight.mp4           -- dead space removed (final deliverable)
+  <character>-<scene>.jpg           -- approved 9:16 reference image
+  <scene>-seg1.mp4 ... segN.mp4    -- individual video segments
+  <character>-<scene>-final.mp4     -- concatenated final video
 ```
 
-## Creating a New Character
+## See Also
 
-1. Write a new character anchor block with unique physical details
-2. Choose a new seed number (different from other characters)
-3. Generate a hero image and get user approval
-4. All subsequent images and videos for this character use the same anchor + seed
-
-Multiple characters can coexist -- each has their own anchor block + seed pair.
-
-## Delivery
-
-Send all generated images and videos to the user via Telegram immediately upon generation. Never make the user ask for a file they're waiting on.
-
-For Telegram delivery, read the bot token from `~/.openclaw/openclaw.json` at `config['channels']['telegram']['botToken']`.
+- `references/setup.md` -- API key setup, dependencies, quick test
+- `references/command-reference.md` -- Copy-paste code for every step
+- `references/lessons-learned.md` -- All pitfalls and findings from testing
+- `examples/` -- Demo videos generated with this skill
